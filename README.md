@@ -1,35 +1,31 @@
-基于 **RAGAnything + LightRAG + Qwen3‑VL + BGE‑M3** 的本地知识库问答 Demo，主要参考文献：
+Demo for local knowledge‑base question answering based on RAGAnything + LightRAG + Qwen3‑VL + BGE‑M3.
+Main reference:
 
-> 范滋德 — 《中国常见蝇类检索表（第二版）》
+Fan Zide — Keys to Common Flies of China (2nd Edition)
 
-本项目可以对该文献进行解析、建立向量索引及知识图谱，并通过 RAG 架构实现问答，支持：
+This project can parse the above reference, build a vector index and a knowledge graph, and provide Q&A through a RAG architecture. It supports:
 
-- 文本检索 + 图谱检索（LightRAG）
-- Qwen3‑VL 文本 / 多模态大模型
-- 正向检索（已知名称 → 检索路径 + 属 / 种特征）
-- 反向识别（给出特征 → 推断可能的蝇类及概率）
+Text retrieval + graph retrieval (LightRAG)
+Qwen3‑VL text / multimodal LLM
+Forward retrieval (known name → retrieval path + genus / species features)
+Reverse identification (given features → infer possible fly species and probabilities)
+1. Environment Setup
+1.1 Python and OS
+Python ≥ 3.10 (async_utils.py uses the X | None type union syntax)
+Recommended environment:
+Linux / WSL2 / Windows
+A machine with a GPU (especially when running Qwen3‑VL‑32B)
+At least 16 GB of RAM
+1.2 Create a virtual environment
+Example using conda:
 
----
 
-## 1. 环境准备
+conda create -n meijie python=3.10 -y
+conda activate meijie
+1.3 Install dependencies
+Create requirements.txt in the project root (example):
 
-### 1.1 Python 与操作系统
 
-- Python ≥ 3.10（`async_utils.py` 使用了 `X | None` 语法）
-- 推荐环境：
-  - Linux / WSL2 / Windows
-  - 有 GPU 的机器（特别是运行 Qwen3‑VL‑32B 时）
-  - 至少 16 GB 内存
-
-### 1.2 创建虚拟环境
-
-# 以 conda 为例  
-conda create -n meijie python=3.10 -y  
-conda activate meijie  
-1.3 安装依赖
-在项目根目录创建 requirements.txt（示例）：
-
-txt
 torch
 sentence-transformers
 streamlit
@@ -39,44 +35,47 @@ raganything
 lightrag
 mineru
 pyyaml
-安装依赖：
+Install dependencies:
 
-bash
+
 pip install -r requirements.txt
-# 或
+# or
 pip install torch sentence-transformers streamlit "openai>=1.0.0" pillow raganything lightrag mineru pyyaml
-提示：请根据你机器的 CUDA 版本，选择合适的 torch 安装方式（官网或镜像源）。
+Tip: Choose the appropriate way to install torch according to your CUDA version (official website or mirror sources).
 
-2. 模型与后端服务
+2. Models and Backend Services
 2.1 Qwen3‑VL + vLLM
-本项目通过 vLLM 的 OpenAI 兼容接口调用 Qwen3‑VL，在 qwen3_vl_wrapper.py 中配置：
+This project calls Qwen3‑VL via vLLM’s OpenAI‑compatible API. Configure it in qwen3_vl_wrapper.py:
+
 
 VLLM_BASE_URL = "http://127.0.0.1:8000/v1"
 VLLM_API_KEY = "EMPTY"
 VLLM_MODEL_NAME = "Qwen3-VL-32B-Instruct"
-你需要：
+You need to:
 
-在一台 GPU 机器上启动 vLLM 服务，加载 Qwen3-VL-32B-Instruct（或其他 Qwen3‑VL 模型）。
-保证运行本项目的机器能访问到 VLLM_BASE_URL。
-启动示例（仅示意）：
+Start a vLLM service on a GPU machine and load Qwen3-VL-32B-Instruct (or another Qwen3‑VL model).
+Ensure the machine running this project can access VLLM_BASE_URL.
+Example startup command (for illustration only):
+
 
 python -m vllm.entrypoints.openai.api_server \
   --model Qwen/Qwen3-VL-32B-Instruct \
   --host 0.0.0.0 \
   --port 8000 \
   --max-model-len 32768
-如需远程服务，请修改 qwen3_vl_wrapper.py：
+For remote services, modify qwen3_vl_wrapper.py:
+
 
 VLLM_BASE_URL = "http://your-server-ip:8000/v1"
 VLLM_MODEL_NAME = "Your-Qwen3-VL-Model-Name"
-2.2 向量模型 BGE‑M3
-项目中统一使用 BAAI/bge-m3 作为嵌入模型，例如：
+2.2 Embedding model BGE‑M3
+The project consistently uses BAAI/bge-m3 as the embedding model, for example:
 
 from sentence_transformers import SentenceTransformer
 
 embed_model_name = "BAAI/bge-m3"
 embed_model = SentenceTransformer(embed_model_name, device=device)
-设备选择逻辑示例（streamlit_app_en.py）：
+Device selection logic example (from streamlit_app_en.py):
 
 if torch.cuda.is_available():
     if torch.cuda.device_count() > 1:
@@ -85,39 +84,40 @@ if torch.cuda.is_available():
         device = "cuda:0"
 else:
     device = "cpu"
-多 GPU：默认放在 cuda:1，避免与 Qwen3‑VL 冲突。
-单 GPU：放在 cuda:0。
-无 GPU：退回 cpu（速度会明显变慢）。
-3. 路径与数据配置
-3.1 基本目录
-代码中常见路径定义方式：
+Multi‑GPU: by default, put it on cuda:1 to avoid conflicts with Qwen3‑VL.
+Single GPU: use cuda:0.
+No GPU: fall back to cpu (much slower).
+3. Paths and Data Configuration
+3.1 Base directories
+Common path definitions in the code:
 
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 WORKING_DIR = BASE_DIR / "rag_store"
 PARSED_OUTPUT_DIR = BASE_DIR / "parsed_output"
-rag_store/：LightRAG / RAGAnything 的索引与缓存目录（自动创建）。
-parsed_output/：解析中间文件目录（自动创建）。
-3.2 文档路径（重要）
-当前代码中文档路径被写成 Linux 绝对路径，你需要根据自己的环境修改。
+rag_store/: index and cache directory for LightRAG / RAGAnything (auto‑created).
+parsed_output/: intermediate files from document parsing (auto‑created).
+3.2 Document path (important)
+Currently, document paths in the code are hard‑coded Linux absolute paths. You must modify them according to your own environment.
 
-streamlit_app_en.py 中：
+In streamlit_app_en.py:
 
 DOC_PATH = Path(
     "/root/meijie/范滋德——《中国常见蝇类检索表  第二版》——RAG.docx"
 )
-async_utils.py 中（命令行构建索引用）：
+In async_utils.py (used for CLI index building):
 
 doc_path = Path(r"/root/meijie/范滋德——《中国常见蝇类检索表  第二版》——RAG.docx")
-建议统一改为相对路径（推荐）：
+It’s recommended to use a unified relative path instead:
 
 # streamlit_app_en.py
 DOC_PATH = BASE_DIR / "input" / "范滋德——《中国常见蝇类检索表  第二版》——RAG.docx"
 
 # async_utils.py
 doc_path = BASE_DIR / "input" / "范滋德——《中国常见蝇类检索表  第二版》——RAG.docx"
-然后在项目根目录创建 input/ 文件夹，将 docx 放入其中：
+Then, create an input/ folder in the project root and put the .docx file there:
+
 
 meijie/
   ├─ input/
@@ -126,11 +126,12 @@ meijie/
   ├─ async_utils.py
   ├─ qwen3_vl_wrapper.py
   ...
-4. 主要代码文件说明
-4.1 streamlit_app_en.py（Streamlit Web 应用）
-英文 Web UI 入口文件，核心逻辑包括：
+4. Main Code Files
+4.1 streamlit_app_en.py (Streamlit Web App)
+Entry file for the English Web UI. Core logic includes:
 
-4.1.1 简易 Tokenizer：避免 tiktoken 联网
+4.1.1 Simple tokenizer: avoid tiktoken network calls
+
 class SimpleTokenizer:
     def encode(self, text: str):
         if not text:
@@ -151,7 +152,7 @@ def get_tokenizer() -> SimpleTokenizer:
     if "simple_tokenizer" not in st.session_state:
         st.session_state["simple_tokenizer"] = SimpleTokenizer()
     return st.session_state["simple_tokenizer"]
-在「从已有索引加载」路径中显式传入：
+Explicitly passed in the “load from existing index” path:
 
 tokenizer = get_tokenizer()
 lightrag_instance = LightRAG(
@@ -160,7 +161,7 @@ lightrag_instance = LightRAG(
     embedding_func=embedding_func,
     tokenizer=tokenizer,
 )
-4.1.2 嵌入模型构建（BGE‑M3）
+4.1.2 Building the embedding model (BGE‑M3)
 
 def build_embedding_func() -> EmbeddingFunc:
     embed_model_name = "BAAI/bge-m3"
@@ -196,8 +197,9 @@ def build_embedding_func() -> EmbeddingFunc:
         max_token_size=512,
     )
     return embedding_func
-4.1.3 RAG 构建 / 加载
-重建索引：
+4.1.3 RAG construction / loading
+Rebuild index:
+
 
 def build_rag_for_rebuild() -> RAGAnything:
     WORKING_DIR.mkdir(parents=True, exist_ok=True)
@@ -221,7 +223,7 @@ def build_rag_for_rebuild() -> RAGAnything:
         embedding_func=embedding_func,
     )
     return rag
-从已有索引加载：
+Load from existing index:
 
 async def build_rag_from_existing() -> RAGAnything:
     if not WORKING_DIR.exists() or not any(WORKING_DIR.iterdir()):
@@ -249,7 +251,7 @@ async def build_rag_from_existing() -> RAGAnything:
         vision_model_func=vision_model_func,
     )
     return rag
-4.1.4 索引构建流程
+4.1.4 Index building flow
 
 async def build_index(rag: RAGAnything):
     st.write(">>> Starting index construction (this may take a while for the first time)...")
@@ -266,7 +268,7 @@ async def build_index(rag: RAGAnything):
     )
 
     st.write(">>> Index construction completed.")
-4.1.5 首次初始化逻辑
+4.1.5 First‑time initialization logic
 
 def init_rag_first_time():
     try:
@@ -283,8 +285,8 @@ def init_rag_first_time():
             st.session_state["rag"] = rag
             st.session_state["rag_mode"] = "rebuilt"
             st.success("Index construction completed.")
-4.1.6 问答交互
-模式选择（正向 / 反向）：
+4.1.6 Q&A interaction
+Mode selection (forward / reverse):
 
 mode_choice = st.radio(
     "Question Mode",
@@ -294,7 +296,8 @@ mode_choice = st.radio(
     ],
     index=0,
 )
-包装问题并调用 RAG：
+Wrap question and call RAG:
+
 
 if ask_clicked and question.strip():
     rag: RAGAnything = st.session_state["rag"]
@@ -321,12 +324,13 @@ if ask_clicked and question.strip():
 
     st.session_state["clear_question"] = True
     st.rerun()
-4.2 qwen3_vl_wrapper.py（Qwen3‑VL 封装）
-该文件通过 vLLM 的 OpenAI 接口提供两个入口函数：
+4.2 qwen3_vl_wrapper.py (Qwen3‑VL wrapper)
+This file exposes two entry functions via vLLM’s OpenAI API:
 
-文本 LLM：llm_model_func
-文本 + 图像 VLM：vision_model_func
-关键配置：
+Text LLM: llm_model_func
+Text + image VLM: vision_model_func
+Key configuration:
+
 
 from openai import OpenAI
 
@@ -338,7 +342,8 @@ client = OpenAI(
     base_url=VLLM_BASE_URL,
     api_key=VLLM_API_KEY,
 )
-语言控制（强制回答语言与用户问题语言一致）：
+Language control (force the answer language to match the question language):
+
 
 LANGUAGE_INSTRUCTION = (
     "CRITICAL OUTPUT RULE: You must answer in the SAME language as the user's current question. "
@@ -346,7 +351,8 @@ LANGUAGE_INSTRUCTION = (
     "Note: The provided document context is in Chinese. You must translate the relevant information into English when answering an English question. "
     "如果用户用中文提问，请务必用中文回答。"
 )
-构造完整提示词（模式 + 领域指令 + 上下文 + 用户问题）：
+Build the full prompt (mode + domain instruction + context + user question):
+
 
 def _build_full_prompt(
     user_prompt: str,
@@ -373,7 +379,7 @@ def _build_full_prompt(
         parts.append(user)
 
     return "\n\n".join(parts).strip()
-供 RAG 调用的文本接口：
+Text interface for RAG:
 
 async def llm_model_func(
     prompt: str,
@@ -400,8 +406,8 @@ async def llm_model_func(
         max_new_tokens=MAX_NEW_TOKENS_DEFAULT,
         **gen_args,
     )
-4.3 async_utils.py（异步工具 + 命令行模式）
-4.3.1 run_async：在后台线程跑 asyncio
+4.3 async_utils.py (async utilities + CLI mode)
+4.3.1 run_async: run asyncio in a background thread
 
 import asyncio
 import threading
@@ -435,8 +441,9 @@ def run_async(coro: Awaitable[Any]) -> Any:
     loop = _ensure_loop()
     future = asyncio.run_coroutine_threadsafe(coro, loop)
     return future.result()
-4.3.2 命令行模式：构建 / 加载索引 + 终端问答
-（结构与 streamlit_app_en.py 类似，这里只展示核心部分）
+4.3.2 CLI mode: build / load index + terminal Q&A
+(Structure is similar to streamlit_app_en.py; only core parts are shown here.)
+
 
 import sys
 import asyncio
@@ -454,7 +461,8 @@ from qwen3_vl_wrapper import llm_model_func, vision_model_func
 
 BASE_DIR = Path(__file__).resolve().parent
 WORKING_DIR = BASE_DIR / "rag_store"
-构建嵌入模型：
+Build embedding model:
+
 
 def build_embedding_func() -> EmbeddingFunc:
     embed_model_name = "BAAI/bge-m3"
@@ -483,7 +491,8 @@ def build_embedding_func() -> EmbeddingFunc:
         max_token_size=512,
     )
     return embedding_func
-构建 / 加载 RAG：
+Build / load RAG:
+
 
 def build_rag_for_rebuild() -> RAGAnything:
     WORKING_DIR.mkdir(parents=True, exist_ok=True)
@@ -533,7 +542,7 @@ async def build_rag_from_existing() -> RAGAnything:
     )
 
     return rag
-构建索引与问答：
+Build index and Q&A:
 
 async def build_index(rag: RAGAnything):
     print(">>> 开始构建索引（第一次会比较慢）...")
@@ -577,7 +586,8 @@ async def ask_question(rag: RAGAnything):
 
         print("\n>>> RAG 答案：")
         print(answer)
-入口：
+Entry point:
+
 
 async def main():
     if "--rebuild" in sys.argv:
@@ -591,63 +601,64 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-5. 运行方式
-5.1 命令行模式（可选）
-在项目根目录下：
+5. How to Run
+5.1 CLI mode (optional)
+From the project root:
 
 
-# 重建索引（解析文档 + 建索引）
+# Rebuild index (parse document + build index)
 python async_utils.py --rebuild
 
-# 仅加载已有 rag_store 后问答
+# Only load existing rag_store and start Q&A
 python async_utils.py
-5.2 启动 Streamlit Web 应用
-在项目根目录下：
+5.2 Start the Streamlit Web app
+From the project root:
 
 
 streamlit run streamlit_app_en.py
-终端会显示访问 URL（通常为 http://localhost:8501），浏览器打开即可。
+The terminal will show the access URL (typically http://localhost:8501). Open it in your browser.
 
-6. 常见问题
-6.1 找不到文档（FileNotFoundError）
-错误示例：
+6. Common Issues
+6.1 Document not found (FileNotFoundError)
+Example errors:
+
 
 FileNotFoundError: Document not found: /root/meijie/...
 FileNotFoundError: 找不到文档：/root/meijie/...
-解决方法：
+How to fix:
 
-确认文档路径正确存在；
-将 streamlit_app_en.py 中的 DOC_PATH、async_utils.py 中的 doc_path 修改为你的真实路径；
-建议使用 BASE_DIR / "input" / ... 的相对路径，并将 docx 放到 input/ 目录。
-6.2 CUDA / 显存问题
-若遇到 CUDA 初始化失败或显存不足：
+Make sure the document path exists and is correct.
+Modify DOC_PATH in streamlit_app_en.py and doc_path in async_utils.py to your real path.
+It is recommended to use a relative path like BASE_DIR / "input" / ... and put the .docx into the input/ directory.
+6.2 CUDA / VRAM issues
+If you encounter CUDA initialization failures or out‑of‑memory errors:
 
-确认已安装支持 GPU 的 torch；
-确认 vLLM 所在机器有足够显存容纳 Qwen3‑VL；
-必要时可以在构建嵌入模型时强制指定设备，例如：
+Make sure you installed a GPU‑enabled version of torch.
+Ensure the vLLM machine has enough VRAM to hold Qwen3‑VL.
+If necessary, explicitly set the device when building the embedding model, for example:
 
 if torch.cuda.is_available():
     device = "cuda:0"
 else:
     device = "cpu"
-6.3 无法连接 vLLM / OpenAI 接口
-错误示例：
+6.3 Unable to connect to vLLM / OpenAI interface
+Example error:
+
 
 ConnectionError: Failed to establish a new connection: [Errno 111] Connection refused
-排查步骤：
+Troubleshooting steps:
 
-确认 vLLM 服务是否已启动且无报错；
-检查 VLLM_BASE_URL 地址和端口是否匹配；
-如跨机器访问，确认网络连通、防火墙配置无误。
-
-7. 建议的项目结构
+Confirm the vLLM service has started and is running without errors.
+Check that VLLM_BASE_URL address and port match your actual service.
+If accessing across machines, confirm network connectivity and firewall settings.
+7. Suggested Project Structure
 
 meijie/
-  ├─ streamlit_app_en.py      # Web UI 入口（英文界面）
-  ├─ qwen3_vl_wrapper.py      # Qwen3-VL + vLLM 封装
-  ├─ async_utils.py           # run_async 工具 + 命令行模式
-  ├─ input/                   # 放原始 docx 文档
-  ├─ rag_store/               # 索引与缓存（运行后自动生成）
-  ├─ parsed_output/           # 文档解析中间文件（运行后自动生成）
+  ├─ streamlit_app_en.py      # Web UI entry (English interface)
+  ├─ qwen3_vl_wrapper.py      # Qwen3-VL + vLLM wrapper
+  ├─ async_utils.py           # run_async utility + CLI mode
+  ├─ input/                   # original .docx document
+  ├─ rag_store/               # index and cache (auto-generated at runtime)
+  ├─ parsed_output/           # intermediate parsing files (auto-generated at runtime)
   ├─ requirements.txt
   └─ README.md
