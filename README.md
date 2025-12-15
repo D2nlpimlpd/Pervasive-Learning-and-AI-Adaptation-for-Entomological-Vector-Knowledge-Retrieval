@@ -849,19 +849,6 @@ For questions or suggestions, please open an issue on GitHub or contact the auth
 
 ---
 
-## 📚 Citation
-
-If you use this platform in your research, please cite:
-
-    @inproceedings{li2025pervasive,
-      title={Pervasive Learning and AI Adaptation for Entomological Vector Knowledge Retrieval},
-      author={Li, Haopeng and Chen, Lingnan},
-      booktitle={IEEE International Conference on Pervasive Computing and Communications Workshops (PerCom Workshops)},
-      year={2025}
-    }
-
----
-
 **Made with ❤️ using RAGAnything, LightRAG, Qwen3-VL, and BGE-M3**
 
 **Deployed at**: Lingnan University Vector Identification Platform
