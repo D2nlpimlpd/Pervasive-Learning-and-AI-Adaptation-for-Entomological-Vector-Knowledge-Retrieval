@@ -25,21 +25,6 @@ The platform integrates three core components:
 
 All computation runs fully on local GPUs, preserving data sovereignty while modernizing vector surveillance workflows.
 
-### Mathematical Formulation
-
-**Dense Retrieval**: Given a user query `x`, we encode it into a dense vector and measure relevance using cosine similarity:
-
-q = f_θ(x) ∈ R^d
-s(x, d_i) = cos(q, d_i) = (q^T · d_i) / (||q||_2 · ||d_i||_2)
-
-**Knowledge Graph Scoring**: Entities and relations are embedded using a translational scoring function:
-
-φ(h, r, t) = ||h + r - t||_2^2
-
-**RAG Generation**: The final answer combines retrieved chunks with generation probabilities:
-
-p(y | x) = Σ_i p(y | x, d_i) · p(d_i | x)
-
 ---
 
 ## ✨ Key Features
@@ -82,8 +67,6 @@ The platform treats **every identification episode as a micro-lesson**:
 - Aggregated statistics identifying problematic taxa for future curation
 
 ### 🌐 Multimodal Capabilities
-
-- **Text + Image Input**: Upload specimen photos alongside textual descriptions
 - **Vision-Language Understanding**: Qwen3-VL processes both modalities simultaneously
 - **Structured Output**: Returns identification results, key characteristics, and distribution information
 
