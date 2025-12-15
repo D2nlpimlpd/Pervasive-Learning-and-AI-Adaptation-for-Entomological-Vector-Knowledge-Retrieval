@@ -1,19 +1,130 @@
-# Demo for Local Knowledge-Base Question Answering
+# Pervasive Learning and AI Adaptation for Entomological Vector Knowledge Retrieval
 
-> Based on RAGAnything + LightRAG + Qwen3-VL + BGE-M3
+> A locally deployed, server-side RAG platform that transforms static entomological monographs into an interactive identification and learning environment.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
+---
+
+## 📋 System Overview
+
+Synanthropic flies are major disease vectors in China, yet routine identification still relies on bulky Chinese-language keys and monographs that are hard to use, slow to update, and inaccessible to many practitioners. This platform addresses these challenges by providing:
+
+**A fully local, privacy-preserving RAG system** that ingests authoritative entomological books on an on-premise server and exposes them through an interactive Chinese conversational interface. The system currently **covers 1,671 vector species** with complete family-, genus-, and species-level identification keys.
+
+### System Architecture
+
+![System Overview](./images/system-overview.png)
+
+The platform integrates three core components:
+
+1. **Dense Retrieval Engine**: Uses BAAI/bge-m3 multilingual embeddings for semantic search across document chunks
+2. **Knowledge Graph**: Automatically constructed domain knowledge graph capturing taxonomic relationships, morphological traits, and identification pathways
+3. **Multimodal LLM**: Qwen3-VL-32B-Instruct served via vLLM for natural language generation and reasoning
+
+All computation runs fully on local GPUs, preserving data sovereignty while modernizing vector surveillance workflows.
+
+### Mathematical Formulation
+
+**Dense Retrieval**: Given a user query `x`, we encode it into a dense vector and measure relevance using cosine similarity:
+
+q = f_θ(x) ∈ R^d
+s(x, d_i) = cos(q, d_i) = (q^T · d_i) / (||q||_2 · ||d_i||_2)
+
+**Knowledge Graph Scoring**: Entities and relations are embedded using a translational scoring function:
+
+φ(h, r, t) = ||h + r - t||_2^2
+
+**RAG Generation**: The final answer combines retrieved chunks with generation probabilities:
+
+p(y | x) = Σ_i p(y | x, d_i) · p(d_i | x)
+
+---
+
+## ✨ Key Features
+
+### 🔍 Dual Identification Modes
+
+#### Forward Retrieval (Key-Driven Identification)
+- **Traditional dichotomous key navigation**: Follow step-by-step identification paths from family → genus → species
+- **Interactive couplet explanation**: The system explains each decision point with diagnostic characteristics
+- **Example query**: "Follow the key to identify genus Musca"
+
+#### Reverse Identification (Trait-Driven Identification)
+- **Feature-based species inference**: Start from observed morphological traits to find candidate taxa
+- **Probabilistic ranking**: Returns plausible species with confidence scores
+- **Example query**: "Which fly species have metallic blue thorax and red eyes?"
+
+### 🎓 Pervasive Learning Design
+
+The platform treats **every identification episode as a micro-lesson**:
+
+- **Explanatory queries**: Ask about taxonomic concepts, morphological terminology, and diagnostic characters
+- **Reasoning transparency**: View complete retrieval paths and knowledge graph traversals
+- **Contextual learning**: System explains not just "what" but "why" certain traits are diagnostic
+
+### 🤖 AI Adaptation at Three Levels
+
+#### 1. Corpus-Level Adaptation
+- Incremental ingestion of new monographs and taxonomic checklists
+- Automatic entity resolution and synonym alignment
+- Dynamic knowledge graph updates without service interruption
+
+#### 2. Interaction-Level Adaptation
+- Lightweight user profiling tracking expertise levels and query history
+- Adaptive explanation depth (simplified for novices, technical for experts)
+- Personalized follow-up question recommendations
+
+#### 3. Community-Level Adaptation
+- Expert flagging system for incorrect or ambiguous answers
+- Curator review workflow for knowledge base corrections
+- Aggregated statistics identifying problematic taxa for future curation
+
+### 🌐 Multimodal Capabilities
+
+- **Text + Image Input**: Upload specimen photos alongside textual descriptions
+- **Vision-Language Understanding**: Qwen3-VL processes both modalities simultaneously
+- **Structured Output**: Returns identification results, key characteristics, and distribution information
+
+### 🔒 Privacy-Preserving Local Deployment
+
+- **No external API calls**: All computation runs on on-premise GPU servers
+- **Data sovereignty**: Institutional knowledge bases remain within local networks
+- **Offline capability**: Full functionality without internet connectivity
+
+---
+
+## 🏆 Performance Highlights
+
+### GAP Evaluation Results
+
+We evaluated multiple LLMs on 200 Chinese entomology queries using Grounded (G), Acceptable (A), and Problematic (P) ratings:
+
+| LLM Model | Grounded (%) | Acceptable (%) | Problematic (%) | Overall Score (%) |
+|-----------|--------------|----------------|-----------------|-------------------|
+| **Qwen3-VL-32B-Instruct** | **72.0** | **9.0** | **19.0** | **76.50** |
+| DeepSeek-Chat | 71.5 | 9.0 | 19.5 | 76.00 |
+| Qwen3-VL-8B-Instruct | 71.0 | 9.5 | 19.5 | 75.75 |
+| OpenAI-gpt-4o | 29.0 | 7.5 | 63.5 | 32.75 |
+| OpenAI-gpt-4.1 | 8.5 | 0.5 | 91.0 | 8.75 |
+
+> **Result**: Chinese-centric open models (Qwen3, DeepSeek) significantly outperform general-purpose OpenAI models on this domain-specific task.
+
+### Coverage Statistics
+
+- **1,671 fly vector species** documented
+- **Complete identification keys** at family, genus, and species levels
+- **Multi-level taxonomic hierarchy** from Diptera order to individual species
+- **Morphological trait database** extracted from authoritative Chinese monographs
+
+---
 
 ## 📖 Main Reference
 
-**Fan Zide — Keys to Common Flies of China (2nd Edition)**
+**范滋德 (Fan Zide) — Keys to Common Flies of China (2nd Edition)**
 
-This project can parse the above reference, build a vector index and a knowledge graph, and provide Q&A through a RAG architecture.
-
-## ✨ Features
-
-- **Text retrieval + graph retrieval** (LightRAG)
-- **Qwen3-VL text / multimodal LLM**
-- **Forward retrieval**: known name → retrieval path + genus / species features
-- **Reverse identification**: given features → infer possible fly species and probabilities
+This authoritative monograph serves as the primary knowledge source for the current deployment.
 
 ---
 
@@ -26,6 +137,7 @@ This project can parse the above reference, build a vector index and a knowledge
   - Linux / WSL2 / Windows
   - A machine with a GPU (especially when running Qwen3-VL-32B)
   - At least 16 GB of RAM
+  - CUDA 11.8+ (for GPU acceleration)
 
 ### 1.2 Create a Virtual Environment
 
@@ -182,7 +294,6 @@ Entry file for the English Web UI. Core logic includes:
             if not text:
                 return 0
             return len(text.split())
-
 
     def get_tokenizer() -> SimpleTokenizer:
         if "simple_tokenizer" not in st.session_state:
@@ -470,11 +581,9 @@ This file exposes two entry functions via vLLM's OpenAI API:
     _loop_thread: threading.Thread | None = None
     _loop_lock = threading.Lock()
 
-
     def _loop_runner(loop: asyncio.AbstractEventLoop) -> None:
         asyncio.set_event_loop(loop)
         loop.run_forever()
-
 
     def _ensure_loop() -> asyncio.AbstractEventLoop:
         global _loop, _loop_thread
@@ -489,7 +598,6 @@ This file exposes two entry functions via vLLM's OpenAI API:
                 _loop_thread.start()
             return _loop
 
-
     def run_async(coro: Awaitable[Any]) -> Any:
         loop = _ensure_loop()
         future = asyncio.run_coroutine_threadsafe(coro, loop)
@@ -497,20 +605,15 @@ This file exposes two entry functions via vLLM's OpenAI API:
 
 #### 4.3.2 CLI Mode: Build / Load Index + Terminal Q&A
 
-**(Structure is similar to `streamlit_app_en.py`; only core parts are shown here.)**
-
     import sys
     import asyncio
     from pathlib import Path
     from typing import List
-
     import torch
     from sentence_transformers import SentenceTransformer
-
     from raganything import RAGAnything, RAGAnythingConfig
     from lightrag import LightRAG
     from lightrag.utils import EmbeddingFunc
-
     from qwen3_vl_wrapper import llm_model_func, vision_model_func
 
     BASE_DIR = Path(__file__).resolve().parent
@@ -571,7 +674,6 @@ This file exposes two entry functions via vLLM's OpenAI API:
 
         return rag
 
-
     async def build_rag_from_existing() -> RAGAnything:
         if not WORKING_DIR.exists() or not any(WORKING_DIR.iterdir()):
             raise RuntimeError(
@@ -618,7 +720,6 @@ This file exposes two entry functions via vLLM's OpenAI API:
 
         print(">>> 索引构建完成")
 
-
     async def ask_question(rag: RAGAnything):
         print(">>> 现在可以开始就文档内容提问了(直接回车退出)。")
 
@@ -654,7 +755,6 @@ This file exposes two entry functions via vLLM's OpenAI API:
             rag = await build_rag_from_existing()
 
         await ask_question(rag)
-
 
     if __name__ == "__main__":
         asyncio.run(main())
@@ -706,10 +806,10 @@ If you encounter CUDA initialization failures or out-of-memory errors:
 2. Ensure the vLLM machine has enough VRAM to hold Qwen3-VL.
 3. If necessary, explicitly set the device when building the embedding model:
 
-        if torch.cuda.is_available():
-            device = "cuda:0"
-        else:
-            device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda:0"
+    else:
+        device = "cpu"
 
 ### 6.3 Unable to Connect to vLLM / OpenAI Interface
 
@@ -725,16 +825,24 @@ If you encounter CUDA initialization failures or out-of-memory errors:
 
 ---
 
-## 📁 7. Suggested Project Structure
+## 📁 7. Project Structure
 
     meijie/
+    ├── images/
+    │   └── system-overview.png
     ├── input/
     │   └── 范滋德——《中国常见蝇类检索表  第二版》——RAG.docx
-    ├── rag_store/              # (auto-generated at runtime)
-    ├── parsed_output/          # (auto-generated at runtime)
-    ├── streamlit_app_en.py     # Web UI entry (English interface)
-    ├── qwen3_vl_wrapper.py     # Qwen3-VL + vLLM wrapper
-    ├── async_utils.py          # run_async utility + CLI mode
+    ├── rag_store/
+    │   ├── vdb_entities.json
+    │   ├── vdb_relationships.json
+    │   ├── graph_chunk_entity_relation.graphml
+    │   └── ...
+    ├── parsed_output/
+    │   ├── auto/
+    │   └── ...
+    ├── streamlit_app_en.py
+    ├── qwen3_vl_wrapper.py
+    ├── async_utils.py
     ├── requirements.txt
     └── README.md
 
@@ -744,14 +852,34 @@ If you encounter CUDA initialization failures or out-of-memory errors:
 
 This project is licensed under the MIT License.
 
+---
+
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome!
+Contributions, issues, and feature requests are welcome! Please feel free to check the issues page.
+
+---
 
 ## 📧 Contact
 
-For questions or suggestions, please open an issue on GitHub.
+For questions or suggestions, please open an issue on GitHub or contact the authors.
+
+---
+
+## 📚 Citation
+
+If you use this platform in your research, please cite:
+
+    @inproceedings{li2025pervasive,
+      title={Pervasive Learning and AI Adaptation for Entomological Vector Knowledge Retrieval},
+      author={Li, Haopeng and Chen, Lingnan},
+      booktitle={IEEE International Conference on Pervasive Computing and Communications Workshops (PerCom Workshops)},
+      year={2025}
+    }
 
 ---
 
 **Made with ❤️ using RAGAnything, LightRAG, Qwen3-VL, and BGE-M3**
+
+**Deployed at**: Lingnan University Vector Identification Platform
+**Status**: Production-ready for local institutional deployment
