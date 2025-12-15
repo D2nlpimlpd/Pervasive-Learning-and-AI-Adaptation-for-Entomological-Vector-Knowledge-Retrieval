@@ -15,7 +15,7 @@ Synanthropic flies are major disease vectors in China, yet routine identificatio
 
 ### System Architecture
 
-![System Overview](.system-overview(1).png)
+![System Overview](./system-overview(1).png)
 
 The platform integrates three core components:
 
